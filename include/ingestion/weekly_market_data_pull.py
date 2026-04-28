@@ -5,7 +5,7 @@ from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from include.ingestion.configuration import configuration
 
 
-def download_daily_market_data():
+def download_weekly_market_data():
     """Downloads daily stocks data through yfinance
 
     Returns:
