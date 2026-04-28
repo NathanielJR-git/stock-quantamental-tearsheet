@@ -1,4 +1,3 @@
-import datetime
 import json
 import re
 import requests
@@ -9,13 +8,16 @@ from bs4 import BeautifulSoup
 from include.ingestion.configuration import configuration
 
 
-def download_weekly_market_data():
+def download_weekly_market_data(**kwargs):
     """
     Downloads daily stocks data through yfinance
     """
     print("Starts fetching daily stocks data")
     s3_hook = S3Hook(aws_conn_id='aws_default')
-    now = datetime.datetime.now()
+    ds = kwargs.get('ds')
+    if not ds:
+        raise ValueError("Macro {{ds}} is not found, make sure function is called via PythonOperator(provide_context=True)")
+    year, month, day = ds.split("-")
 
     # Company specific data
     for ticker in configuration.TICKERS:
@@ -40,7 +42,7 @@ def download_weekly_market_data():
         }
 
         # Save metrics JSON to S3
-        json_key = f"bronze/market_metrics/ticker={ticker}/year={now.year}/month={now.month:02d}/day={now.day:02d}/metrics.json"
+        json_key = f"bronze/market_metrics/ticker={ticker}/year={year}/month={month:02d}/day={day:02d}/metrics.json"
         s3_hook.load_string(
             string_data=json.dumps(metrics), 
             key=json_key, 
@@ -53,13 +55,16 @@ def download_weekly_market_data():
     print("Done fetching daily stocks data")
     
     
-def download_risk_free_rate_data():
+def download_risk_free_rate_data(**kwargs):
     """
     Downloads risk-free rate data from investing.com
     """
     print("Starts fetching daily risk-free rate data")
     s3_hook = S3Hook(aws_conn_id='aws_default')
-    now = datetime.datetime.now()
+    ds = kwargs.get('ds')
+    if not ds:
+        raise ValueError("Macro {{ds}} is not found, make sure function is called via PythonOperator(provide_context=True)")
+    year, month, day = ds.split("-")
     
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -89,7 +94,7 @@ def download_risk_free_rate_data():
     
     # Save risk-free rate data to S3
     rf_data = {"risk-free-rate": yield_decimal}
-    rf_key = f"bronze/risk-free-rate/year={now.year}/month={now.month:02d}/day={now.day:02d}/macro.json"
+    rf_key = f"bronze/risk-free-rate/year={year}/month={month:02d}/day={day:02d}/macro.json"
     
     s3_hook.load_string(
         string_data=json.dumps(rf_data),

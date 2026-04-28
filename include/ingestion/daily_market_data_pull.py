@@ -1,5 +1,3 @@
-import datetime
-import json
 import pandas as pd
 import yfinance as yf
 from airflow.exceptions import AirflowSkipException
@@ -7,7 +5,7 @@ from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from include.ingestion.configuration import configuration
 
 
-def download_daily_market_data():
+def download_daily_market_data(**kwargs):
     """
     Downloads daily stocks data through yfinance
     """
@@ -18,7 +16,10 @@ def download_daily_market_data():
     
     print("Starts fetching daily stocks data")
     s3_hook = S3Hook(aws_conn_id='aws_default')
-    now = datetime.datetime.now()
+    ds = kwargs.get('ds')
+    if not ds:
+        raise ValueError("Macro {{ds}} is not found, make sure function is called via PythonOperator(provide_context=True)")
+    year, month, day = ds.split("-")
 
     # Company specific data
     for ticker in configuration.TICKERS:
@@ -32,7 +33,7 @@ def download_daily_market_data():
 
 
         # Save OHLCV CSV to S3
-        csv_key = f"bronze/market_data/ticker={ticker}/year={now.year}/month={now.month:02d}/day={now.day:02d}/data.csv"
+        csv_key = f"bronze/market_data/ticker={ticker}/year={year}/month={month:02d}/day={day:02d}/data.csv"
         s3_hook.load_string(
             string_data=df.to_csv(index=True), 
             key=csv_key, 
