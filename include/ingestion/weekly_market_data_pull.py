@@ -83,7 +83,7 @@ def download_risk_free_rate_data(**kwargs):
         match = re.search(r'Indonesia 10Y Bond Yield.*?([0-9]+\.[0-9]+)%', text_content, re.IGNORECASE)
         
         if not match:
-            raise ValueError("Regex pattern tidak ditemukan di text konten.")
+            raise ValueError("Regex pattern not found inside text content")
             
         # Save in decimal format
         yield_decimal = float(match.group(1)) / 100 
