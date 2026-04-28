@@ -6,10 +6,8 @@ from include.ingestion.configuration import configuration
 
 
 def download_historical_ohlcv_data():
-    """Downloads historical OHLCV data through yfinance
-
-    Returns:
-        pd.DataFrame: historical (5Y) OHLCV data
+    """
+    Downloads historical OHLCV data through yfinance
     """
     print("Starts fetching initial stocks data (5 Years)")
     s3_hook = S3Hook(aws_conn_id='aws_default')
@@ -39,10 +37,8 @@ def download_historical_ohlcv_data():
 
 
 def download_company_profiles():
-    """Downloads company profiles data for all tickers
-
-    Returns:
-        pd.DataFrame: company specific profile data
+    """
+    Downloads company profiles data for all tickers
     """
     print("Starts fetching company profiles")
     s3_hook = S3Hook(aws_conn_id='aws_default')

@@ -8,10 +8,8 @@ from include.ingestion.configuration import configuration
 
 
 def download_daily_market_data():
-    """Downloads daily stocks data through yfinance
-
-    Returns:
-        pd.DataFrame: stokcs data with selected metrics
+    """
+    Downloads daily stocks data through yfinance
     """
     # Check if market is open
     market_check = yf.download("^JKSE", period="1d", interval="1d")
