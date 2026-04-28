@@ -1,4 +1,5 @@
 import datetime
+import json
 import pandas as pd
 import yfinance as yf
 from airflow.exceptions import AirflowSkipException
@@ -6,95 +7,83 @@ from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from include.ingestion.configuration import configuration
 
 
-def download_initial_stocks_data():
-    """Downloads stocks data through yfinance
-
-    Returns:
-        pd.DataFrame: ...
-    """
-    return yf.download(
-        tickers=configuration.TICKERS,
-        period="1mo",
-        interval="1d",
-        group_by="ticker",
-        auto_adjust=True
-    )
-
-
-def download_company_profiles():
-    """Downloads stocks' company profile data
-
-    Returns:
-        pd.DataFrame: ...
-    """
-    return yf.download(
-        tickers=configuration.TICKERS,
-        period="1mo",
-        interval="1d",
-        group_by="ticker",
-        auto_adjust=True
-    )
-
-
-def download_daily_stocks_data():
+def download_daily_market_data():
     """Downloads daily stocks data through yfinance
 
     Returns:
-        pd.DataFrame: stokcs data with selected columns 
+        pd.DataFrame: stokcs data with selected metrics
     """
-    # Log: starts fetching daily stocks data
     print("Starts fetching daily stocks data")
+    s3_hook = S3Hook(aws_conn_id='aws_default')
+    now = datetime.datetime.now()
 
+    # Company specific data
     for ticker in configuration.TICKERS:
         print(f"Start fetching market data for {ticker}")
-
-        # Close, High, Low, Open, Volume
-        df = yf.download(
-            ticker, 
-            period="1d", 
-            interval="1d",
-            auto_adjust=True
-        )
-
+        
+        # Today's market data
+        df = yf.download(ticker, period="1d", interval="1d", auto_adjust=True)
+        
         if df.empty:
             raise AirflowSkipException(f"Market is not open today, skipping task")
-        df.columns = df.columns.droplevel(1)
+            
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.droplevel(1)
 
-        # Ticker Info
+        # Fundamental and sentiment metrics (daily snapshot)
         info = yf.Ticker(ticker).info
+        metrics = {
+            "revenue": info.get("totalRevenue"),
+            "earnings": info.get("netIncomeToCommon"),
+            "ebitda": info.get("ebitda"),
+            "enterprise_value": info.get("enterpriseValue"),
+            "book_value": info.get("bookValue"),
+            "total_debt": info.get("totalDebt"),
+            "total_equity": info.get("totalStockholderEquity"),
+            "total_assets": info.get("totalAssets"),
+            "npm": info.get("profitMargins"),
+            "dividend_yield": info.get("dividendYield"),
+            "payout_ratio": info.get("payoutRatio"),
+            "target_mean_price": info.get("targetMeanPrice"),
+            "recommendation_mean": info.get("recommendationMean")
+        }
 
-
-
-        # Load to S3
-        now = datetime.now()
-        csv_data = df.to_csv(index=True)
-        s3_key = f"bronze/market_data/ticker={ticker}/year={now.year}/month={now.month:02d}/day={now.day:02d}/data.csv"
-        s3_hook = S3Hook(aws_conn_id='aws_default')
+        # Save OHLCV CSV to S3
+        csv_key = f"bronze/market_data/ticker={ticker}/year={now.year}/month={now.month:02d}/day={now.day:02d}/data.csv"
         s3_hook.load_string(
-            string_data=csv_data,
-            key=s3_key,
-            bucket_name=configuration.BUCKET_NAME,
+            string_data=df.to_csv(index=True), 
+            key=csv_key, 
+            bucket_name=configuration.BUCKET_NAME, 
             replace=True
         )
 
-        print(f"Successfully fetched market data for {ticker}")
+        # Save metrics JSON to S3
+        json_key = f"bronze/market_metrics/ticker={ticker}/year={now.year}/month={now.month:02d}/day={now.day:02d}/metrics.json"
+        s3_hook.load_string(
+            string_data=json.dumps(metrics), 
+            key=json_key, 
+            bucket_name=configuration.BUCKET_NAME, 
+            replace=True
+        )
 
-    # Log: done fetching daily stocks data
+        print(f"Successfully fetched market data & metrics for {ticker}")
+        
     print("Done fetching daily stocks data")
 
-def download_daily_macro_data():
-    """Downloads daily risk free rate data
-
-    Returns:
-        pd.DataFrame: ...
-    """
-    return yf.download(
-        tickers=configuration.TICKERS,
-        period="1mo",
-        interval="1d",
-        group_by="ticker",
-        auto_adjust=True
+    # Macro data
+    print("Starts fetching daily macro data")
+    
+    # TO-DO: fetch latest risk-free rate data
+    
+    macro_key = f"bronze/market_metrics/ticker={ticker}/year={now.year}/month={now.month:02d}/day={now.day:02d}/metrics.json"
+    s3_hook.load_string(
+        string_data=..., 
+        key=macro_key, 
+        bucket_name=configuration.BUCKET_NAME, 
+        replace=True
     )
+    
+    print("Done fetching daily macro data")
 
 
 if __name__ == "__main__":
