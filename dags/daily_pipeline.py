@@ -1,7 +1,7 @@
 import pandas as pd
 import pendulum
 from airflow.sdk import dag, task
-from include.ingestion.yfinance_pull import download_stocks_data
+from include.ingestion.market_data_pull import download_stocks_data
 
 @dag(
     schedule=None,
