@@ -1,0 +1,16 @@
+# AWS & AirFlow Integrations
+apache-airflow-providers-amazon==9.25.0
+boto3==1.42.96
+
+# Data Ingestion and Manipulation
+yfinance==1.3.0
+pandas==3.0.2
+feedparser==6.0.12
+requests==2.33.1
+beautifulsoup4==4.14.3
+
+# LLM (RAG)
+groq==1.2.0
+
+# Big Data Compute
+pyspark==4.1.1
