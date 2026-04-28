@@ -1,15 +1,17 @@
 import datetime
 import json
+import re
+import requests
 import yfinance as yf
+from airflow.exceptions import AirflowSkipException
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from bs4 import BeautifulSoup
 from include.ingestion.configuration import configuration
 
 
 def download_weekly_market_data():
-    """Downloads daily stocks data through yfinance
-
-    Returns:
-        pd.DataFrame: stokcs data with selected metrics
+    """
+    Downloads daily stocks data through yfinance
     """
     print("Starts fetching daily stocks data")
     s3_hook = S3Hook(aws_conn_id='aws_default')
@@ -49,22 +51,51 @@ def download_weekly_market_data():
         print(f"Successfully fetched market data & metrics for {ticker}")
         
     print("Done fetching daily stocks data")
-
-    # Macro data
-    print("Starts fetching daily macro data")
     
-    # TO-DO: fetch latest risk-free rate data
     
-    macro_key = f"bronze/market_metrics/ticker={ticker}/year={now.year}/month={now.month:02d}/day={now.day:02d}/metrics.json"
+def download_risk_free_rate_data():
+    """
+    Downloads risk-free rate data from investing.com
+    """
+    print("Starts fetching daily risk-free rate data")
+    s3_hook = S3Hook(aws_conn_id='aws_default')
+    now = datetime.datetime.now()
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    
+    try:
+        response = requests.get(
+            configuration.RISK_FREE_RATE_URL, 
+            headers=headers, 
+            timeout=10
+        )
+        response.raise_for_status() 
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        text_content = soup.find("h2", id="description").get_text()
+        match = re.search(r'Indonesia 10Y Bond Yield.*?([0-9]+\.[0-9]+)%', text_content, re.IGNORECASE)
+        
+        if not match:
+            raise ValueError("Regex pattern tidak ditemukan di text konten.")
+            
+        # Save in decimal format
+        yield_decimal = float(match.group(1)) / 100 
+            
+    except Exception as e:
+        print(f"Error scraping data: {e}")
+        raise AirflowSkipException("Risk-free rate data scraping failed")
+    
+    # Save risk-free rate data to S3
+    rf_data = {"risk-free-rate": yield_decimal}
+    rf_key = f"bronze/risk-free-rate/year={now.year}/month={now.month:02d}/day={now.day:02d}/macro.json"
+    
     s3_hook.load_string(
-        string_data=..., 
-        key=macro_key, 
+        string_data=json.dumps(rf_data),
+        key=rf_key, 
         bucket_name=configuration.BUCKET_NAME, 
         replace=True
     )
     
-    print("Done fetching daily macro data")
-
-
-if __name__ == "__main__":
-    print(configuration.TICKERS)
+    print("Done fetching daily risk-free rate data")
