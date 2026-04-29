@@ -93,7 +93,7 @@ def download_news_from_gnews(**kwargs):
             extracted_news.append({
                 "title": news_item["title"],
                 "summary": news_item["description"],
-                "publication_date": news_item["pulished date"]
+                "publication_date": news_item["published date"]
             })
             
         # Save ticker's news data to S3
