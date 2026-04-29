@@ -35,6 +35,7 @@ def download_historical_ohlcv_data():
             bucket_name=configuration.BUCKET_NAME, 
             replace=True
         )
+        
     print("Done fetching initial stocks data (5 Years)")
 
 
@@ -52,4 +53,5 @@ def download_company_profiles():
         bucket_name=configuration.BUCKET_NAME,
         replace=True
     )
+
     print("Done fetching company profiles")

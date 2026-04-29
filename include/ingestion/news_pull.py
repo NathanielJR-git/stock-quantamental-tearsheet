@@ -40,3 +40,5 @@ def download_news_from_yfinance(**kwargs):
             bucket_name=configuration.BUCKET_NAME, 
             replace=True
         )
+        
+    print("Done fetching stocks news data from yfinance")
