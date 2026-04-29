@@ -31,6 +31,9 @@ def download_news_from_yfinance(**kwargs):
         # Load news
         for news_item in news:
             content = news_item['content']
+            if not content:
+                continue
+            
             extracted_news.append({
                 "title": content["title"],
                 "summary": content["summary"],
