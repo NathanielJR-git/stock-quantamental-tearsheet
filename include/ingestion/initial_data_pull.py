@@ -69,7 +69,7 @@ def download_initial_news(**kwargs):
         raise ValueError("Macro {{ds}} is not found, make sure function is called via PythonOperator(provide_context=True)")
    
     end_dt = datetime.datetime.strptime(ds, "%Y-%m-%d")
-    start_dt = start_dt - datetime.timedelta(days=90)
+    start_dt = end_dt - datetime.timedelta(days=90)
     
     # Setup GNews for Indonesian news search
     google_news = GNews(
