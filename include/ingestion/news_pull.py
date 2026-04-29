@@ -33,7 +33,7 @@ def download_news_from_yfinance(**kwargs):
             })
             
         # Save news data to S3
-        s3_key = f"bronze/news_data/ticker={ticker}/year={year}/month={month:02d}/day={day:02d}/historical_data.csv"
+        s3_key = f"bronze/news_data/ticker={ticker}/year={year}/month={month:02d}/day={day:02d}/historical_data.json"
         s3_hook.load_string(
             string_data=json.dumps(extracted_news), 
             key=s3_key, 
