@@ -82,8 +82,8 @@ def download_initial_news(**kwargs):
 
     # Fetch news for each stock ticker
     for profile in configuration.STATIC_COMPANY_PROFILES:
-        ticker = profile["ticker"]
-        company_name = profile["company_name"]
+        ticker = profile.get("ticker")
+        company_name = profile.get("company_name")
         
         print(f"Fetching news for {ticker} ({company_name})")
         
@@ -99,9 +99,9 @@ def download_initial_news(**kwargs):
         extracted_news = []
         for news_item in news_data:
             extracted_news.append({
-                "title": news_item["title"],
-                "summary": news_item["description"],
-                "publication_date": news_item["pulished date"]
+                "title": news_item.get("title"),
+                "summary": news_item.get("description"),
+                "publication_date": news_item.get("pulished date")
             })
             
         # Save ticker's news data to S3

@@ -30,14 +30,14 @@ def download_news_from_yfinance(**kwargs):
         extracted_news = []
         # Load news
         for news_item in news:
-            content = news_item['content']
+            content = news_item.get('content')
             if not content:
                 continue
             
             extracted_news.append({
-                "title": content["title"],
-                "summary": content["summary"],
-                "publication_date": content["pubDate"]
+                "title": content.get("title"),
+                "summary": content.get("summary"),
+                "publication_date": content.get("pubDate")
             })
             
         # Save news data to S3
@@ -77,8 +77,8 @@ def download_news_from_gnews(**kwargs):
 
     # Fetch news for each stock ticker
     for profile in configuration.STATIC_COMPANY_PROFILES:
-        ticker = profile["ticker"]
-        company_name = profile["company_name"]
+        ticker = profile.get("ticker")
+        company_name = profile.get("company_name")
         
         print(f"Fetching news for {ticker} ({company_name})")
         
@@ -94,9 +94,9 @@ def download_news_from_gnews(**kwargs):
         extracted_news = []
         for news_item in news_data:
             extracted_news.append({
-                "title": news_item["title"],
-                "summary": news_item["description"],
-                "publication_date": news_item["published date"]
+                "title": news_item.get("title"),
+                "summary": news_item.get("description"),
+                "publication_date": news_item.get("published date")
             })
             
         # Save ticker's news data to S3
