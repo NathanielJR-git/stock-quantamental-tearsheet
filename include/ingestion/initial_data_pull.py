@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 import yfinance as yf
 from airflow.exceptions import AirflowSkipException
@@ -42,29 +43,11 @@ def download_company_profiles():
     """
     print("Starts fetching company profiles")
     s3_hook = S3Hook(aws_conn_id='aws_default')
-    profiles = []
-
-    # Fetch each stock's company profile
-    for ticker in configuration.TICKERS:
-        info = yf.Ticker(ticker).info
-        profile = {
-            "ticker": ticker,
-            "company_name": info.get("longName"),
-            "logo_url": info.get("logo_url", ""),
-            "sector": info.get("sector"),
-            "industry": info.get("industry"),
-            "market_cap": info.get("marketCap"),
-            "shares_outstanding": info.get("sharesOutstanding"),
-            "free_float": info.get("floatShares"),
-            "beta": info.get("beta")
-        }
-        profiles.append(profile)
 
     # Save company profiles to S3
-    df_profiles = pd.DataFrame(profiles)
     s3_hook.load_string(
-        string_data=df_profiles.to_csv(index=False),
-        key="bronze/company_profiles/profiles.csv",
+        string_data=json.dumps(configuration.STATIC_COMPANY_PROFILES),
+        key="bronze/company_profiles/profiles.json",
         bucket_name=configuration.BUCKET_NAME,
         replace=True
     )
