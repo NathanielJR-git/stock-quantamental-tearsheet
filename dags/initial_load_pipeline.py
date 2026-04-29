@@ -36,8 +36,8 @@ def pipeline():
         retry_delay=datetime.timedelta(minutes=2),
         retry_exponential_backoff=True
     )
-    def download_news():
-        download_initial_news()
+    def download_news(**kwargs):
+        download_initial_news(**kwargs)
 
     download_company_profile()
     download_market_data()

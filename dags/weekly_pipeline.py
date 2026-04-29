@@ -19,16 +19,16 @@ def pipeline():
         retry_delay=datetime.timedelta(minutes=2),
         retry_exponential_backoff=True
     )
-    def download_market_data():
-        download_weekly_market_data()
+    def download_market_data(**kwargs):
+        download_weekly_market_data(**kwargs)
 
     @task(
         retries=3,
         retry_delay=datetime.timedelta(minutes=2),
         retry_exponential_backoff=True
     )
-    def download_macro_data():
-        download_risk_free_rate_data()
+    def download_macro_data(**kwargs):
+        download_risk_free_rate_data(**kwargs)
 
     download_market_data()
     download_macro_data()

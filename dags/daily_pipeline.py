@@ -20,17 +20,26 @@ def pipeline():
         retry_delay=datetime.timedelta(minutes=2),
         retry_exponential_backoff=True
     )
-    def download_gnews():
-        download_news_from_gnews()
+    def download_market_data(**kwargs):
+        download_daily_market_data(**kwargs)
+
+    @task(
+        retries=3,
+        retry_delay=datetime.timedelta(minutes=2),
+        retry_exponential_backoff=True
+    )
+    def download_gnews(**kwargs):
+        download_news_from_gnews(**kwargs)
         
     @task(
         retries=3,
         retry_delay=datetime.timedelta(minutes=2),
         retry_exponential_backoff=True
     )
-    def download_yfinance_news():
-        download_news_from_yfinance()
+    def download_yfinance_news(**kwargs):
+        download_news_from_yfinance(**kwargs)
 
+    download_market_data()
     download_gnews()
     download_yfinance_news()
 
