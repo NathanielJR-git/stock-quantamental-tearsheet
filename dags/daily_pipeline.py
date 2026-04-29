@@ -1,0 +1,37 @@
+import datetime
+import pendulum
+from airflow.sdk import dag, task
+from include.ingestion.daily_market_data_pull import download_daily_market_data
+from include.ingestion.news_pull import (
+    download_news_from_gnews, 
+    download_news_from_yfinance
+)
+
+@dag(
+    dag_id="daily-loading-pipeline",
+    schedule="0 17 * * 1-5",
+    start_date=pendulum.datetime(2026, 4, 29, tz="Asia/Jakarta"),
+    catchup=True,
+    tags=["bronze", "market_data", "news_data"]
+)
+def pipeline():
+    @task(
+        retries=3,
+        retry_delay=datetime.timedelta(minutes=2),
+        retry_exponential_backoff=True
+    )
+    def download_gnews():
+        download_news_from_gnews()
+        
+    @task(
+        retries=3,
+        retry_delay=datetime.timedelta(minutes=2),
+        retry_exponential_backoff=True
+    )
+    def download_yfinance_news():
+        download_news_from_yfinance()
+
+    download_gnews()
+    download_yfinance_news()
+
+pipeline()
