@@ -1,6 +1,6 @@
 import pandas as pd
 import yfinance as yf
-from airflow.exceptions import AirflowSkipException
+from airflow.sdk.exceptions import AirflowSkipException
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from include.ingestion.configuration import configuration
 
@@ -20,6 +20,8 @@ def download_daily_market_data(**kwargs):
     if not ds:
         raise ValueError("Macro {{ds}} is not found, make sure function is called via PythonOperator(provide_context=True)")
     year, month, day = ds.split("-")
+    month = int(month)
+    day = int(day)
 
     # Company specific data
     for ticker in configuration.TICKERS:

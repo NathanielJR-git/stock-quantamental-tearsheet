@@ -2,7 +2,7 @@ import json
 import re
 import requests
 import yfinance as yf
-from airflow.exceptions import AirflowSkipException
+from airflow.sdk.exceptions import AirflowSkipException
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from bs4 import BeautifulSoup
 from include.ingestion.configuration import configuration
@@ -18,6 +18,8 @@ def download_weekly_market_data(**kwargs):
     if not ds:
         raise ValueError("Macro {{ds}} is not found, make sure function is called via PythonOperator(provide_context=True)")
     year, month, day = ds.split("-")
+    month = int(month)
+    day = int(day)
 
     # Company specific data
     for ticker in configuration.TICKERS:
@@ -82,6 +84,8 @@ def download_risk_free_rate_data(**kwargs):
     if not ds:
         raise ValueError("Macro {{ds}} is not found, make sure function is called via PythonOperator(provide_context=True)")
     year, month, day = ds.split("-")
+    month = int(month)
+    day = int(day)
     
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
