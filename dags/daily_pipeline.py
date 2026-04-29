@@ -9,7 +9,7 @@ from include.ingestion.news_pull import (
 
 @dag(
     dag_id="daily-loading-pipeline",
-    schedule="0 17 * * 1-5",
+    schedule="0 10 * * 1-5", # Every Monday - Friday, 10:00 UTC or 17:00 WIB
     start_date=pendulum.datetime(2026, 4, 29, tz="Asia/Jakarta"),
     catchup=True,
     tags=["bronze", "market_data", "news_data"]
