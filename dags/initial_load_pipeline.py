@@ -1,18 +1,46 @@
-import pandas as pd
+import datetime
 import pendulum
 from airflow.sdk import dag, task
+from include.ingestion.initial_data_pull import (
+    download_historical_ohlcv_data, 
+    download_company_profiles,
+    download_initial_news
+)
 
 @dag(
+    dag_id="initial-loading-pipeline",
     schedule=None,
-    start_date=pendulum.datetime(2026, 4, 28, tz="Asia/Jakarta"),
+    start_date=pendulum.datetime(2026, 4, 29, tz="Asia/Jakarta"),
     catchup=False,
-    tags=["Stock Quantamental Tearsheet Pipeline DAG"]
+    tags=["bronze", "market_data", "news_data"]
 )
 def pipeline():
-    @task
-    def test_yfinance_pull():
-        ...
+    @task(
+        retries=3,
+        retry_delay=datetime.timedelta(minutes=2),
+        retry_exponential_backoff=True
+    )
+    def download_company_profile():
+        download_company_profiles()
+        
+    @task(
+        retries=3,
+        retry_delay=datetime.timedelta(minutes=2),
+        retry_exponential_backoff=True
+    )
+    def download_market_data():
+        download_historical_ohlcv_data()
+        
+    @task(
+        retries=3,
+        retry_delay=datetime.timedelta(minutes=2),
+        retry_exponential_backoff=True
+    )
+    def download_news():
+        download_initial_news()
 
-    test_yfinance_pull()
+    download_company_profile()
+    download_market_data()
+    download_news()
 
 pipeline()
