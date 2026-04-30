@@ -28,7 +28,6 @@ def download_weekly_market_data(**kwargs):
         # Fundamental and sentiment metrics (daily snapshot)
         current_ticker = yf.Ticker(ticker)
         info = current_ticker.info
-        bs = current_ticker.balance_sheet
         fin = current_ticker.financials
 
         # Helper to safely grab the most recent value from financial statements
@@ -38,17 +37,10 @@ def download_weekly_market_data(**kwargs):
             return None
 
         metrics = {
-            # Income statement
-            "revenue": info.get("totalRevenue") or get_latest(fin, "Total Revenue"),
+            # Valuation (related)
+            "ev_ebitda": info.get("enterpriseToEbitda"),
+            "book_value": info.get("bookValue"),
             "earnings": info.get("netIncomeToCommon") or get_latest(fin, "Net Income Common Stockholders"),
-            "ebitda": info.get("ebitda") or get_latest(fin, "EBITDA"),
-            "npm": info.get("profitMargins"),
-            # Balance sheet
-            "total_equity": info.get("totalStockholderEquity") or get_latest(bs, "Stockholders Equity"),
-            "total_assets": info.get("totalAssets") or get_latest(bs, "Total Assets"),
-            "enterprise_value": info.get("enterpriseValue"),
-            "book_value": info.get("bookValue") or info.get("bookValue"),
-            "total_debt": info.get("totalDebt") or get_latest(bs, "Total Debt"),
             # Dividends
             "dividend_yield": info.get("dividendYield"),
             "payout_ratio": info.get("payoutRatio"),
@@ -57,7 +49,10 @@ def download_weekly_market_data(**kwargs):
             "recommendation_mean": info.get("recommendationMean"),
             "market_cap": info.get("marketCap"), 
             "shares_outstanding": info.get("sharesOutstanding"), 
-            "free_float": info.get("floatShares"), 
+            "free_float": info.get("floatShares"),
+            # Price
+            "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
+            "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
         }
 
         # Save metrics JSON to S3
