@@ -101,7 +101,7 @@ def download_risk_free_rate_data(**kwargs):
         
         soup = BeautifulSoup(response.text, 'html.parser')
         text_content = soup.find("h2", id="description").get_text()
-        match = re.search(r'Indonesia 10Y Bond Yield.*?([0-9]+\.[0-9]+)%', text_content, re.IGNORECASE)
+        match = re.search(r'([0-9]+\.[0-9]+)%', text_content, re.IGNORECASE)
         
         if not match:
             raise ValueError("Regex pattern not found inside text content")
