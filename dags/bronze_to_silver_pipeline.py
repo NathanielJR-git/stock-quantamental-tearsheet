@@ -1,6 +1,7 @@
 import pendulum
 from airflow.sdk import dag, task
 from include.ingestion.configuration import configuration
+from include.pyspark.template import separated_example
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 
@@ -18,5 +19,6 @@ def pipeline():
         ...
 
     template()
+    separated_example() # or just call a separated pyspark task right away
 
 pipeline()
