@@ -3,10 +3,7 @@ import pendulum
 from airflow.sdk import dag, task
 from include.ingestion.configuration import configuration
 from include.ingestion.daily_market_data_pull import download_daily_market_data
-from include.ingestion.news_pull import (
-    download_news_from_gnews, 
-    download_news_from_yfinance
-)
+from include.ingestion.news_pull import download_news_from_gnews
 
 @dag(
     dag_id="daily-loading-pipeline",
@@ -31,17 +28,9 @@ def pipeline():
     )
     def download_gnews(**kwargs):
         download_news_from_gnews(**kwargs)
-        
-    @task(
-        retries=3,
-        retry_delay=datetime.timedelta(minutes=2),
-        retry_exponential_backoff=True
-    )
-    def download_yfinance_news(**kwargs):
-        download_news_from_yfinance(**kwargs)
 
     download_market_data()
     download_gnews()
-    download_yfinance_news()
+
 
 pipeline()
