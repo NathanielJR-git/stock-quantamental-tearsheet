@@ -3,7 +3,7 @@ import pendulum
 from airflow.sdk import dag, task
 from include.ingestion.configuration import configuration
 from include.ingestion.weekly_market_data_pull import (
-    download_weekly_market_data, 
+    download_weekly_metrics_data, 
     download_risk_free_rate_data
 )
 
@@ -20,8 +20,8 @@ def pipeline():
         retry_delay=datetime.timedelta(minutes=2),
         retry_exponential_backoff=True
     )
-    def download_market_data(**kwargs):
-        download_weekly_market_data(**kwargs)
+    def download_metrics_data(**kwargs):
+        download_weekly_metrics_data(**kwargs)
 
     @task(
         retries=3,
@@ -31,7 +31,7 @@ def pipeline():
     def download_macro_data(**kwargs):
         download_risk_free_rate_data(**kwargs)
 
-    download_market_data()
+    download_metrics_data()
     download_macro_data()
 
 pipeline()

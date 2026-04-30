@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from include.ingestion.configuration import configuration
 
 
-def download_weekly_market_data(**kwargs):
+def download_weekly_metrics_data(**kwargs):
     """
     Downloads daily stocks data through yfinance
     """
