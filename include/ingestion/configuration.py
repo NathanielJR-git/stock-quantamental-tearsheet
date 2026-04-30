@@ -33,9 +33,14 @@ class Configuration:
         ]
 
         # S3 bucket name
-        self.BUCKET_NAME = ""
+        self.BUCKET_NAME = "nathaniel-tearsheet-datalake-413539128030-ap-southeast-3-an"
         
         # Investing.com URL for fetching risk-free rate data
         self.RISK_FREE_RATE_URL = "https://tradingeconomics.com/indonesia/government-bond-yield"
+        
+        # Airflow DAG staring date
+        self.START_YEAR = 2026
+        self.START_MONTH = 4
+        self.START_DAY = 29
 
 configuration = Configuration()
