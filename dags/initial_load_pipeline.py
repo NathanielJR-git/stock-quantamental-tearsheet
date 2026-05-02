@@ -1,7 +1,7 @@
 import datetime
 import pendulum
 from airflow.sdk import dag, task
-from include.ingestion.configuration import configuration
+from include.configuration import configuration
 from include.ingestion.initial_data_pull import (
     download_historical_ohlcv_data, 
     download_company_profiles,

@@ -4,7 +4,7 @@ import pandas as pd
 import yfinance as yf
 from airflow.sdk.exceptions import AirflowSkipException
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-from include.ingestion.configuration import configuration
+from include.configuration import configuration
 from gnews import GNews
 
 

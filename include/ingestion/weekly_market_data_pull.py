@@ -5,7 +5,7 @@ import yfinance as yf
 from airflow.sdk.exceptions import AirflowSkipException
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from bs4 import BeautifulSoup
-from include.ingestion.configuration import configuration
+from include.configuration import configuration
 
 
 def download_weekly_metrics_data(**kwargs):

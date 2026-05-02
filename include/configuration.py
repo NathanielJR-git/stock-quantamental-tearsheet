@@ -43,4 +43,10 @@ class Configuration:
         self.START_MONTH = 4
         self.START_DAY = 29
 
+        # Company profile S3 paths
+        self.BRONZE_COMPANY_PROFILES_PATH = f"s3a://{self.BUCKET_NAME}/bronze/company_profiles/profiles.json"
+        self.SILVER_COMPANY_PROFILES_PATH = f"s3a://{self.BUCKET_NAME}/silver/company_profiles/"
+        self.GOLD_COMPANY_PROFILES_PATH   = f""
+
+
 configuration = Configuration()

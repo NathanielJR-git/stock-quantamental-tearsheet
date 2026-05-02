@@ -1,7 +1,7 @@
 import datetime
 import pendulum
 from airflow.sdk import dag, task
-from include.ingestion.configuration import configuration
+from include.configuration import configuration
 from include.ingestion.daily_market_data_pull import download_daily_market_data
 from include.ingestion.news_pull import download_news_from_gnews
 
