@@ -46,7 +46,19 @@ class Configuration:
         # Company profile S3 paths
         self.BRONZE_COMPANY_PROFILES_PATH = f"s3a://{self.BUCKET_NAME}/bronze/company_profiles/profiles.json"
         self.SILVER_COMPANY_PROFILES_PATH = f"s3a://{self.BUCKET_NAME}/silver/company_profiles/"
-        self.GOLD_COMPANY_PROFILES_PATH   = f""
 
+        # News S3 paths
+        self.BRONZE_NEWS_PATH = f"s3a://{self.BUCKET_NAME}/bronze/news_data/"
+        self.SILVER_NEWS_PATH = f"s3a://{self.BUCKET_NAME}/silver/news_data/"
+
+        # Market dan risk data S3 paths
+        self.BRONZE_MARKET_DATA_PATH = f"s3a://{self.BUCKET_NAME}/bronze/market_data/"
+        self.BRONZE_MARKET_METRICS_PATH = f"s3a://{self.BUCKET_NAME}/bronze/market_metrics/"
+        self.BRONZE_RFF_PATH = f"s3a://{self.BUCKET_NAME}/bronze/risk_free_rate/"
+        self.SILVER_MARKET_AND_RISK_PATH = f"s3a://{self.BUCKET_NAME}/silver/market_and_risk/"
+
+        # Gold S3 paths
+        self.GOLD_MARKET_DATA_PATH = f"s3a://{self.BUCKET_NAME}/gold/market_data/"
+        self.GOLD_STOCK_TEARSHEET = f"s3a://{self.BUCKET_NAME}/gold/stock_tearsheet/"
 
 configuration = Configuration()
