@@ -131,8 +131,8 @@ def transform_news_data(spark: SparkSession, sc: SparkContext):
             col("extracted_data.extracted_news").alias("key_news")
         ) \
         .withColumn("news_item", explode("key_news")) \
-        .select("ticker", "news_item.*") \
-        .filter(col("news_item").isNotNull())
+        .filter(col("news_item").isNotNull()) \
+        .select("ticker", "news_item.*")
 
     # Save to news S3 silver path as Parquet
     df_silver_news.write \
@@ -287,7 +287,7 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
     df_silver_market_and_risk = df_market_and_risk \
         .withColumn("PBV", col("close") / ("book_value")) \
         .withColumn("EPS", col("earnings") / ("shares_outstanding")) \
-        .withColumn("PBV", col("close") / ("EPS")) \
+        .withColumn("PER", col("close") / ("EPS")) \
         .withColumn("free_float", col("free_float") / col("shares_oustanding"))
 
     # Write combined market and risk data to S3 silver path as Parquet
