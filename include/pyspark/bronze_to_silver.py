@@ -121,7 +121,7 @@ def transform_news_data(spark: SparkSession, sc: SparkContext):
     )
 
     # Select news item (title, summary, and )
-    df_silver_news = df_parsed \
+    df_extracted_news = df_parsed \
         .select(
             F.col("ticker"),
             F.col("extracted_data.extracted_news").alias("key_news")
@@ -129,6 +129,13 @@ def transform_news_data(spark: SparkSession, sc: SparkContext):
         .withColumn("news_item", F.explode("key_news")) \
         .filter(F.col("news_item").isNotNull()) \
         .select("ticker", "news_item.*")
+    
+    # Join df extracted news with top 20 news dataframe to extract publication date
+    df_silver_news = df_extracted_news.join(
+        df_news_top_20.select("ticker", "title", "publication_date"),
+        on=["ticker", "title"],
+        how="left"
+    ).withColumn("date", F.to_date("publication_date"))
 
     # Save to news S3 silver path as Parquet
     df_silver_news.write \
@@ -310,7 +317,7 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
         .withColumn("PBV", F.col("close") / ("book_value")) \
         .withColumn("EPS", F.col("earnings") / ("shares_outstanding")) \
         .withColumn("PER", F.col("close") / ("EPS")) \
-        .withColumn("free_float", F.col("free_float") / F.col("shares_oustanding"))
+        .withColumn("free_float", F.col("free_float") / F.col("shares_outstanding"))
 
     # Write combined market and risk data to S3 silver path as Parquet
     df_silver_market_and_risk.write \
