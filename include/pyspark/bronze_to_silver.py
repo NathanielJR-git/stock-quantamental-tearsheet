@@ -12,7 +12,8 @@ from pyspark.sql.types import (
 from pyspark.sql.functions import (
     col, lower, to_timestamp, row_number,
     to_json,from_json, struct, collect_list,
-    explode
+    explode, to_date, concat_ws, last, avg,
+    lag
 )
 from pyspark.sql.window import Window
 
@@ -37,7 +38,7 @@ def transform_company_profiles(spark: SparkSession, sc: SparkContext):
         .json(configuration.BRONZE_COMPANY_PROFILES_PATH)
 
     # Transform to silver format
-    df_silver = df_bronze.select(
+    df_silver_profiles = df_bronze.select(
         col("ticker"),
         col("company_name"),
         lower(col("sector")).alias("sector"),
@@ -45,7 +46,7 @@ def transform_company_profiles(spark: SparkSession, sc: SparkContext):
     )
 
     # Save to company profile S3 silver path as Parquet
-    df_silver.write \
+    df_silver_profiles.write \
         .mode("overwrite") \
         .parquet(configuration.SILVER_COMPANY_PROFILES_PATH)
 
@@ -116,7 +117,7 @@ def transform_news_data(spark: SparkSession, sc: SparkContext):
     )
 
     # Select news item (title, summary, and )
-    df_news_insights = df_parsed \
+    df_silver_news = df_parsed \
         .select(
             col("ticker"),
             col("extracted_data.extracted_news").alias("key_news")
@@ -126,7 +127,7 @@ def transform_news_data(spark: SparkSession, sc: SparkContext):
         .filter(col("news_item").isNotNull())
 
     # Save to news S3 silver path as Parquet
-    df_news_insights.write \
+    df_silver_news.write \
         .mode("overwrite") \
         .partitionBy("ticker", "date") \
         .parquet(configuration.SILVER_NEWS_PATH)
@@ -138,7 +139,130 @@ def transform_news_data(spark: SparkSession, sc: SparkContext):
 def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
-    print("Starts market data bronze to silver transformation")
+    print("Starts market data and risk bronze to silver transformation")
 
+    # Read historical and daily (routine) market data, then merge them
+    df_market_data_historical = spark.read \
+        .option("header", "true") \
+        .csv(f"{configuration.BRONZE_MARKET_DATA_PATH}/ticker=*/historical_data.csv") \
+        .withColumnRenamed("Date", "date") \
+        .withColumn("date", to_date("date")) \
+        .withColumnRenamed("Close", "date") \
+        .withColumnRenamed("High", "high") \
+        .withColumnRenamed("Low", "low") \
+        .withColumnRenamed("Open", "open") \
+        .withColumnRenamed("Volume", "volume") \
 
-    print(f"Done processing market data bronze to silver transformation")
+    df_market_data_routine = spark.read \
+        .option("header", "true") \
+        .csv(f"{configuration.BRONZE_MARKET_DATA_PATH}/ticker=*/year=*/") \
+        .drop("year", "month", "day") \
+        .withColumnRenamed("Date", "date") \
+        .withColumn("date", to_date("date")) \
+        .withColumnRenamed("Close", "date") \
+        .withColumnRenamed("High", "high") \
+        .withColumnRenamed("Low", "low") \
+        .withColumnRenamed("Open", "open") \
+        .withColumnRenamed("Volume", "volume") \
+    
+    df_market_data = df_market_data_historical \
+        .unionByName(df_market_data_routine, allowMissingColumns=True) \
+        .dropDuplicates(["ticker", "date"])
+    
+    # Market data feature engineering windows
+    sma_20_window  = Window.partitionBy("ticker").orderBy("date").rowsBetween(-19, 0)
+    sma_50_window  = Window.partitionBy("ticker").orderBy("date").rowsBetween(-49, 0)
+    sma_100_window = Window.partitionBy("ticker").orderBy("date").rowsBetween(-99, 0)
+    sma_200_window = Window.partitionBy("ticker").orderBy("date").rowsBetween(-199, 0)
+    lag_window = Window.partitionBy("ticker").orderBy("date")
+
+    # Simple Moving Averages (SMA)
+    df_market_data_sma = df_market_data \
+        .withColumn("sma_20", avg("close").over(sma_20_window)) \
+        .withColumn("sma_50", avg("close").over(sma_50_window)) \
+        .withColumn("sma_100", avg("close").over(sma_100_window)) \
+        .withColumn("sma_200", avg("close").over(sma_200_window)) \
+    
+    # Periodic returns (1 day, 1 week, 1 month, 3 months, 6 months, 12 months)
+    df_market_data_returns = df_market_data_sma \
+        .withColumn("price_1d_ago", lag(col("close"), 1).over(lag_window)) \
+        .withColumn("price_1w_ago", lag(col("close"), 5).over(lag_window)) \
+        .withColumn("price_1m_ago", lag(col("close"), 21).over(lag_window)) \
+        .withColumn("price_3m_ago", lag(col("close"), 63).over(lag_window)) \
+        .withColumn("price_6m_ago", lag(col("close"), 126).over(lag_window)) \
+        .withColumn("price_12m_ago", lag(col("close"), 252).over(lag_window)) \
+        .withColumn("1d_return", (col("close") - col("price_1d_ago")) / col("price_1d_ago")) \
+        .withColumn("1w_return", (col("close") - col("price_1w_ago")) / col("price_1w_ago")) \
+        .withColumn("1m_return", (col("close") - col("price_1m_ago")) / col("price_1m_ago")) \
+        .withColumn("3m_return", (col("close") - col("price_3m_ago")) / col("price_3m_ago")) \
+        .withColumn("6m_return", (col("close") - col("price_6m_ago")) / col("price_6m_ago")) \
+        .withColumn("12m_return", (col("close") - col("price_12m_ago")) / col("price_12m_ago")) \
+        .drop("price_1d_ago", "price_1w_ago", "price_1m_ago", "price_3m_ago", "price_6m_ago", "price_12m_ago")
+    
+    # Sharpe Ratio
+    ...
+    
+    # Value at Risk (VaR)
+    ...
+
+    # Beta 3Y
+    ...
+
+    df_market_data_final = ...
+
+    # Read market metrics data
+    df_market_metrics = spark.read.json(configuration.BRONZE_MARKET_METRICS_PATH) \
+        .withColumns("date", to_date(concat_ws("-", col("year"), col("month"), col("day")), "yyyy-MM-dd")
+        ).drop("year", "month", "day").dropDuplicates(["ticker", "date"])
+
+    # Read risk-free rate data
+    df_rff = spark.read.json(configuration.BRONZE_RFF_PATH) \
+        .withColumns("date", to_date(concat_ws("-", col("year"), col("month"), col("day")), "yyyy-MM-dd")
+        ).drop("year", "month", "day").dropDuplicates(["date"])
+
+    # Combine all data and front fill
+    df_market_combined = df_market_data_final \
+        .join(df_market_metrics, on=["ticker", "date"], how="left") \
+        .join(df_rff, on="date", how="left")
+
+    cols_to_ffill = [
+        "ev_ebitda",
+        "book_value",
+        "earnings",
+        "dividend_yield",
+        "payout_ratio",
+        "target_mean_price",
+        "recommendation_mean",
+        "market_cap",
+        "shares_outstanding",
+        "free_float",
+        "fifty_two_week_low",
+        "fifty_two_week_high",
+        "risk-free-rate"
+    ]
+
+    ffill_window = Window.partitionBy("ticker") \
+        .orderBy("date") \
+        .rowsBetween(Window.unboundedPreceding, Window.currentRow)
+    
+    ffill_expression = {
+        c: last(col(c), True).over(ffill_window) for c in cols_to_ffill
+    }
+
+    df_market_and_risk = df_market_combined \
+        .withColumn(ffill_expression)
+    
+    # PBV, EPS, PER, free float decimal
+    df_silver_market_and_risk = df_market_and_risk \
+        .withColumn("PBV", col("close") / ("book_value")) \
+        .withColumn("EPS", col("earnings") / ("shares_outstanding")) \
+        .withColumn("PBV", col("close") / ("EPS")) \
+        .withColumn("free_float", col("free_float") / col("shares_oustanding"))
+
+    # Write combined market and risk data to S3 silver path as Parquet
+    df_silver_market_and_risk.write \
+        .mode("overwrite") \
+        .partitionBy("ticker", "date") \
+        .parquet(configuration.SILVER_MARKET_AND_RISK_PATH)
+
+    print(f"Done processing market and risk data bronze to silver transformation")
