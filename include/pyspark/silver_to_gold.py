@@ -15,7 +15,34 @@ def transform_to_stock_tearsheet(spark: SparkSession, sc: SparkContext):
     apply_s3_config(sc)
     print("Starts stock tearsheet silver to gold transformation")
 
+    # Read company profiles, news, and market and risk data
+    df_company_profiles = spark.read.parquet(configuration.SILVER_COMPANY_PROFILES_PATH)
+    df_news = spark.read.parquet(configuration.SILVER_NEWS_PATH)
+    df_market_and_risk_data = spark.read \
+        .parquet(configuration.SILVER_MARKET_AND_RISK_PATH) \
+        .drop(
+            "close", "high", "low", "open", "volume",
+            "sma_20", "sma_50", "sma_100", "sma_200", 
+        )
+    
+    # Combine all silver data
+    df_profiles_and_news = df_company_profiles.join(
+        df_news,
+        on="ticker",
+        how="inner"
+    )
 
+    df_stock_tearsheet = df_market_and_risk_data.join(
+        df_profiles_and_news,
+        on=["ticker", "date"],
+        how="left"
+    ).dropna(subset=["title"])
+
+    # Save to stock tearsheet S3 gold path as Parquet
+    df_stock_tearsheet.write \
+        .mode("overwrite") \
+        .partitionBy("ticker", "date") \
+        .parquet(configuration.GOLD_STOCK_TEARSHEET)
 
     print("Done processing stock tearsheet silver to gold transformation")
 
