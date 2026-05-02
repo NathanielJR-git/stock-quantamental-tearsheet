@@ -1,3 +1,4 @@
+import os
 from airflow.sdk import task
 from include.configuration import configuration
 from include.llm.pick_and_rate_news import extract_top_news_udf
@@ -51,7 +52,14 @@ def transform_company_profiles(spark: SparkSession, sc: SparkContext):
     print(f"Done processing company profile bronze to silver transformation")
 
 
-@task.pyspark(conn_id="spark_default")
+GROQ_KEY = os.getenv("GROQ_API_KEY")
+
+@task.pyspark(
+    conn_id="spark_default",
+    conf={
+        "spark.executorEnv.GROQ_API_KEY": GROQ_KEY
+    }
+)
 def transform_news_data(spark: SparkSession, sc: SparkContext):
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
