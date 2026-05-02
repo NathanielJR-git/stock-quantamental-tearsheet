@@ -20,6 +20,9 @@ from pyspark.sql.window import Window
 
 @task.pyspark(conn_id="spark_default")
 def transform_company_profiles(spark: SparkSession, sc: SparkContext):
+    """
+    Convert company profiles file format from JSON to Parquet
+    """
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
     print("Starts company profiles bronze to silver transformation")
@@ -62,6 +65,11 @@ GROQ_KEY = os.getenv("GROQ_API_KEY")
     }
 )
 def transform_news_data(spark: SparkSession, sc: SparkContext):
+    """
+    Call Groq API for the latest 20 news form each stocks
+    to get the top 3 most important news and each sentiment scores
+    using Pandas UDF and Groq API's Llama 3.3 versatile model
+    """
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
     print("Starts news data bronze to silver transformation")
@@ -137,6 +145,11 @@ def transform_news_data(spark: SparkSession, sc: SparkContext):
 
 @task.pyspark(conn_id="spark_default")
 def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
+    """
+    Reads market data, market metrics dan risk-free rate data
+    (historical and daily data), clean them and create new
+    financial metrics and ratios features
+    """
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
     print("Starts market data and risk bronze to silver transformation")
