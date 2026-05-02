@@ -4,6 +4,7 @@ from airflow.sdk import dag, task
 from include.configuration import configuration
 from include.ingestion.daily_market_data_pull import download_daily_market_data
 from include.ingestion.news_pull import download_news_from_gnews
+from include.pyspark.bronze_to_silver import transform_news_data, transform_market_and_risk_data
 
 @dag(
     dag_id="daily-loading-pipeline",
@@ -29,8 +30,17 @@ def pipeline():
     def download_gnews(**kwargs):
         download_news_from_gnews(**kwargs)
 
-    download_market_data()
-    download_gnews()
+    # Data ingestion
+    ingest_market_data = download_market_data()
+    ingest_news = download_gnews()
 
+    # Transform bronze to silver format
+    silver_transform_news_data = transform_news_data()
+    silver_transform_market_and_risk = transform_market_and_risk_data()
+
+
+    # Transform silver to gold format
+    [ingest_market_data, ingest_news] >> \
+    [silver_transform_market_and_risk, silver_transform_news_data]
 
 pipeline()
