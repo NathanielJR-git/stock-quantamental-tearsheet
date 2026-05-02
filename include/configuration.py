@@ -45,7 +45,7 @@ class Configuration:
 
         # Company profile S3 paths
         self.BRONZE_COMPANY_PROFILES_PATH = f"s3a://{self.BUCKET_NAME}/bronze/company_profiles/profiles.json"
-        self.SILVER_COMPANY_PROFILES_PATH = f"s3a://{self.BUCKET_NAME}/silver/company_profiles/"
+        self.SILVER_COMPANY_PROFILES_PATH = f"s3a://{self.BUCKET_NAME}/silver/company_profiles/profiles.parquet"
 
         # News S3 paths
         self.BRONZE_NEWS_PATH = f"s3a://{self.BUCKET_NAME}/bronze/news_data/"
