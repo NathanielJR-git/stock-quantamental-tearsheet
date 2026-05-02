@@ -210,15 +210,41 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
         .drop("price_1d_ago", "price_1w_ago", "price_1m_ago", "price_3m_ago", "price_6m_ago", "price_12m_ago")
     
     # Sharpe Ratio
-    ...
-    
-    # Value at Risk (VaR)
-    ...
+    risk_window = Window.partitionBy("ticker").orderBy("date").rowsBetween(-251, 0)
+
+    df_market_data_risk = df_market_data_returns \
+        .withColumn("stddev_1d_return", F.stddev("1d_return").over(risk_window)) \
+        .withColumn("mean_1d_return", F.avg("1d_return").over(risk_window)) \
+        .withColumn(
+            "sharpe_ratio_252d",
+            F.when(
+                F.col("stddev_1d_return") > 0, 
+                (F.col("mean_1d_return") / F.col("stddev_1d_return")) * math.sqrt(252)
+            ).otherwise(None)
+        )
+
+    # Value at Risk (VaR) 95%
+    df_market_data_final = df_market_data_risk \
+        .withColumn("returns_array", F.collect_list("1d_return").over(risk_window)) \
+        .withColumn("sorted_returns", F.array_sort("returns_array")) \
+        .withColumn("array_length", F.size("sorted_returns")) \
+        .withColumn(
+            # Calculate 5% based off array length
+            "var_index", 
+            F.expr("cast(ceil(array_length * 0.05) as int)") 
+        ) \
+        .withColumn(
+            # Extract return values
+            "var_95_252d", 
+            F.expr("element_at(sorted_returns, var_index)")
+        ) \
+        .drop(
+            "stddev_1d_return", "mean_1d_return", 
+            "returns_array", "sorted_returns", "array_length", "var_index"
+        )
 
     # TODO: Beta 3Y
     ...
-
-    df_market_data_final = ...
 
     # Read market metrics data
     df_market_metrics = spark.read.json(configuration.BRONZE_MARKET_METRICS_PATH) \
