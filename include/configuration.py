@@ -58,7 +58,7 @@ class Configuration:
         self.SILVER_MARKET_AND_RISK_PATH = f"s3a://{self.BUCKET_NAME}/silver/market_and_risk/"
 
         # Gold S3 paths
-        self.GOLD_MARKET_DATA_PATH = f"s3a://{self.BUCKET_NAME}/gold/market_data/"
+        self.GOLD_CHART_DATA_PATH = f"s3a://{self.BUCKET_NAME}/gold/chart_data/"
         self.GOLD_STOCK_TEARSHEET = f"s3a://{self.BUCKET_NAME}/gold/stock_tearsheet/"
 
 configuration = Configuration()
