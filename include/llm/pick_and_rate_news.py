@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from groq import Groq
+from include.configuration import configuration
 from pyspark.sql.functions import pandas_udf
 from pyspark.sql.types import StringType
 from tenacity import retry, wait_exponential, stop_after_attempt
@@ -29,7 +30,7 @@ def call_groq_api(ticker_news_json: str, client: Groq) -> str:
 
     # Get and return Groq Llama response
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile", 
+        model=configuration.LLM_MODEL_NAME, 
         response_format={"type": "json_object"},
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1
