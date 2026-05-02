@@ -12,7 +12,7 @@ from pyspark.sql.types import (
 from pyspark.sql.functions import (
     col, lower, to_timestamp, row_number,
     to_json,from_json, struct, collect_list,
-    explode, to_date, concat_ws, last, avg,
+    explode, to_date, make_date, last, avg,
     lag
 )
 from pyspark.sql.window import Window
@@ -226,7 +226,7 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
 
     # Read market metrics data
     df_market_metrics = spark.read.json(configuration.BRONZE_MARKET_METRICS_PATH) \
-        .withColumn("date", to_date(concat_ws("-", col("year"), col("month"), col("day")), "yyyy-MM-dd")) \
+        .withColumn("date", make_date(col("year"), col("month"), col("day"))) \
         .withColumns({
             "ev_ebitda": col("ev_ebitda").cast("double"),
             "book_value": col("book_value").cast("double"),
@@ -246,7 +246,7 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
 
     # Read risk-free rate data
     df_rff = spark.read.json(configuration.BRONZE_RFF_PATH) \
-        .withColumn("date", to_date(concat_ws("-", col("year"), col("month"), col("day")), "yyyy-MM-dd")) \
+        .withColumn("date", make_date(col("year"), col("month"), col("day"))) \
         .withColumn("risk-free-rate", col("risk-free-rate").cast("float")) \
         .drop("year", "month", "day") \
         .dropDuplicates(["date"])
