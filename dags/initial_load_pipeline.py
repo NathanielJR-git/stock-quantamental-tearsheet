@@ -7,6 +7,7 @@ from include.ingestion.initial_data_pull import (
     download_company_profiles,
     download_initial_news
 )
+from include.pyspark.bronze_to_silver import transform_company_profiles
 
 @dag(
     dag_id="initial-loading-pipeline",
@@ -40,8 +41,12 @@ def pipeline():
     def download_news(**kwargs):
         download_initial_news(**kwargs)
 
-    download_company_profile()
-    download_market_data()
-    download_news()
+    # Initial loading tasks dependencies
+    ingest_company_profile = download_company_profile()
+    ingest_market_data = download_market_data()
+    ingest_news = download_news()
+    silver_company_profiles = transform_company_profiles()
+
+    [ingest_company_profile, ingest_market_data, ingest_news] >> silver_company_profiles
 
 pipeline()
