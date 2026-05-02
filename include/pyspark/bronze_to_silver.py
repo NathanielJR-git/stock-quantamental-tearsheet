@@ -154,29 +154,31 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
     apply_s3_config(sc)
     print("Starts market data and risk bronze to silver transformation")
 
-    # Read historical and daily (routine) market data, then merge them
+    # Read historical market data
     df_market_data_historical = spark.read \
         .option("header", "true") \
         .csv(f"{configuration.BRONZE_MARKET_DATA_PATH}/ticker=*/historical_data.csv") \
-        .withColumns("date", to_date("Date")) \
-        .withColumns("close", col("Close").cast("float")) \
-        .withColumns("high", col("High").cast("float")) \
-        .withColumns("low", col("Low").cast("float")) \
-        .withColumns("open", col("Open").cast("float")) \
-        .withColumns("volume", col("Volume").cast("long")) \
+        .withColumn("date", to_date("Date")) \
+        .withColumn("close", col("Close").cast("float")) \
+        .withColumn("high", col("High").cast("float")) \
+        .withColumn("low", col("Low").cast("float")) \
+        .withColumn("open", col("Open").cast("float")) \
+        .withColumn("volume", col("Volume").cast("long")) \
         .drop("Date", "Close", "High", "Low", "Open", "Volume")
 
+    # Read daily (routine) market data
     df_market_data_routine = spark.read \
         .option("header", "true") \
         .csv(f"{configuration.BRONZE_MARKET_DATA_PATH}/ticker=*/year=*/") \
-        .withColumns("date", to_date("Date")) \
-        .withColumns("close", col("Close").cast("float")) \
-        .withColumns("high", col("High").cast("float")) \
-        .withColumns("low", col("Low").cast("float")) \
-        .withColumns("open", col("Open").cast("float")) \
-        .withColumns("volume", col("Volume").cast("integer")) \
+        .withColumn("date", to_date("Date")) \
+        .withColumn("close", col("Close").cast("float")) \
+        .withColumn("high", col("High").cast("float")) \
+        .withColumn("low", col("Low").cast("float")) \
+        .withColumn("open", col("Open").cast("float")) \
+        .withColumn("volume", col("Volume").cast("integer")) \
         .drop("Date", "Close", "High", "Low", "Open", "Volume", "year", "month", "day")
     
+    # Merge historical and daily market data
     df_market_data = df_market_data_historical \
         .unionByName(df_market_data_routine, allowMissingColumns=True) \
         .dropDuplicates(["ticker", "date"])
@@ -190,25 +192,25 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
 
     # Simple Moving Averages (SMA)
     df_market_data_sma = df_market_data \
-        .withColumns("sma_20", avg("close").over(sma_20_window)) \
-        .withColumns("sma_50", avg("close").over(sma_50_window)) \
-        .withColumns("sma_100", avg("close").over(sma_100_window)) \
-        .withColumns("sma_200", avg("close").over(sma_200_window)) \
+        .withColumn("sma_20", avg("close").over(sma_20_window)) \
+        .withColumn("sma_50", avg("close").over(sma_50_window)) \
+        .withColumn("sma_100", avg("close").over(sma_100_window)) \
+        .withColumn("sma_200", avg("close").over(sma_200_window)) \
     
     # Periodic returns (1 day, 1 week, 1 month, 3 months, 6 months, 12 months)
     df_market_data_returns = df_market_data_sma \
-        .withColumns("price_1d_ago", lag(col("close"), 1).over(lag_window)) \
-        .withColumns("price_1w_ago", lag(col("close"), 5).over(lag_window)) \
-        .withColumns("price_1m_ago", lag(col("close"), 21).over(lag_window)) \
-        .withColumns("price_3m_ago", lag(col("close"), 63).over(lag_window)) \
-        .withColumns("price_6m_ago", lag(col("close"), 126).over(lag_window)) \
-        .withColumns("price_12m_ago", lag(col("close"), 252).over(lag_window)) \
-        .withColumns("1d_return", (col("close") - col("price_1d_ago")) / col("price_1d_ago")) \
-        .withColumns("1w_return", (col("close") - col("price_1w_ago")) / col("price_1w_ago")) \
-        .withColumns("1m_return", (col("close") - col("price_1m_ago")) / col("price_1m_ago")) \
-        .withColumns("3m_return", (col("close") - col("price_3m_ago")) / col("price_3m_ago")) \
-        .withColumns("6m_return", (col("close") - col("price_6m_ago")) / col("price_6m_ago")) \
-        .withColumns("12m_return", (col("close") - col("price_12m_ago")) / col("price_12m_ago")) \
+        .withColumn("price_1d_ago", lag(col("close"), 1).over(lag_window)) \
+        .withColumn("price_1w_ago", lag(col("close"), 5).over(lag_window)) \
+        .withColumn("price_1m_ago", lag(col("close"), 21).over(lag_window)) \
+        .withColumn("price_3m_ago", lag(col("close"), 63).over(lag_window)) \
+        .withColumn("price_6m_ago", lag(col("close"), 126).over(lag_window)) \
+        .withColumn("price_12m_ago", lag(col("close"), 252).over(lag_window)) \
+        .withColumn("1d_return", (col("close") - col("price_1d_ago")) / col("price_1d_ago")) \
+        .withColumn("1w_return", (col("close") - col("price_1w_ago")) / col("price_1w_ago")) \
+        .withColumn("1m_return", (col("close") - col("price_1m_ago")) / col("price_1m_ago")) \
+        .withColumn("3m_return", (col("close") - col("price_3m_ago")) / col("price_3m_ago")) \
+        .withColumn("6m_return", (col("close") - col("price_6m_ago")) / col("price_6m_ago")) \
+        .withColumn("12m_return", (col("close") - col("price_12m_ago")) / col("price_12m_ago")) \
         .drop("price_1d_ago", "price_1w_ago", "price_1m_ago", "price_3m_ago", "price_6m_ago", "price_12m_ago")
     
     # Sharpe Ratio
@@ -224,7 +226,7 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
 
     # Read market metrics data
     df_market_metrics = spark.read.json(configuration.BRONZE_MARKET_METRICS_PATH) \
-        .withColumns("date", to_date(concat_ws("-", col("year"), col("month"), col("day")), "yyyy-MM-dd")) \
+        .withColumn("date", to_date(concat_ws("-", col("year"), col("month"), col("day")), "yyyy-MM-dd")) \
         .withColumns({
             "ev_ebitda": col("ev_ebitda").cast("double"),
             "book_value": col("book_value").cast("double"),
@@ -244,7 +246,7 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
 
     # Read risk-free rate data
     df_rff = spark.read.json(configuration.BRONZE_RFF_PATH) \
-        .withColumns("date", to_date(concat_ws("-", col("year"), col("month"), col("day")), "yyyy-MM-dd")) \
+        .withColumn("date", to_date(concat_ws("-", col("year"), col("month"), col("day")), "yyyy-MM-dd")) \
         .withColumn("risk-free-rate", col("risk-free-rate").cast("float")) \
         .drop("year", "month", "day") \
         .dropDuplicates(["date"])
@@ -279,7 +281,7 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
     }
 
     df_market_and_risk = df_market_combined \
-        .withColumn(ffill_expression)
+        .withColumns(ffill_expression)
     
     # PBV, EPS, PER, free float decimal
     df_silver_market_and_risk = df_market_and_risk \
