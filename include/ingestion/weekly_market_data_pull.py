@@ -109,7 +109,7 @@ def download_risk_free_rate_data(**kwargs):
         raise AirflowSkipException("Risk-free rate data scraping failed")
     
     # Save risk-free rate data to S3
-    rf_data = {"risk-free-rate": yield_decimal}
+    rf_data = {"risk_free_rate": yield_decimal}
     rf_key = f"bronze/risk_free_rate/year={year}/month={month:02d}/day={day:02d}/risk_free_rate.json"
     
     s3_hook.load_string(
