@@ -9,7 +9,9 @@ import pyspark.sql.functions as F
 @task.pyspark(conn_id="spark_default")
 def transform_to_stock_tearsheet(spark: SparkSession, sc: SparkContext):
     """
-    
+    Read company profiles, news, and market and risk data,
+    then join all of them and drop irrelevant columns
+    (e.g. chart data columns used in chart data gold storage)
     """
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
