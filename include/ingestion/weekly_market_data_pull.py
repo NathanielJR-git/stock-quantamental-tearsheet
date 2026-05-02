@@ -110,7 +110,7 @@ def download_risk_free_rate_data(**kwargs):
     
     # Save risk-free rate data to S3
     rf_data = {"risk-free-rate": yield_decimal}
-    rf_key = f"bronze/risk-free-rate/rfr_{year}{month:02d}{day:02d}.json"
+    rf_key = f"bronze/risk-free-rate/year={year}/month={month:02d}/day={day:02d}/risk-free-rate.json"
     
     s3_hook.load_string(
         string_data=json.dumps(rf_data),
