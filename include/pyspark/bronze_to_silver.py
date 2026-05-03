@@ -52,20 +52,19 @@ def transform_company_profiles(spark: SparkSession, sc: SparkContext):
     print(f"Done processing company profile bronze to silver transformation")
 
 
-GROQ_KEY = os.getenv("GROQ_API_KEY")
-
-@task.pyspark(
-    conn_id="spark_default",
-    conf={
-        "spark.executorEnv.GROQ_API_KEY": GROQ_KEY
-    }
-)
+@task.pyspark(conn_id="spark_default")
 def transform_news_data(spark: SparkSession, sc: SparkContext):
     """
     Call Groq API for the latest 20 news form each stocks
     to get the top 3 most important news and each sentiment scores
     using Pandas UDF and Groq API's Llama 3.3 versatile model
     """
+    # Inject Groq API Key to environment for UDF execution
+    groq_key = os.getenv("GROQ_API_KEY")
+    if groq_key:
+        os.environ["GROQ_API_KEY"] = groq_key
+        sc.setLocalProperty("spark.executorEnv.GROQ_API_KEY", groq_key)
+    
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
     print("Starts news data bronze to silver transformation")
