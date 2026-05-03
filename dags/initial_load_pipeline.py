@@ -14,7 +14,7 @@ from include.pyspark.bronze_to_silver import transform_company_profiles
     schedule=None,
     start_date=pendulum.datetime(configuration.START_YEAR, configuration.START_MONTH, configuration.START_DAY, tz="Asia/Jakarta"),
     catchup=False,
-    tags=["bronze", "market_data", "news_data"]
+    tags=["stock_tearsheet", "bronze", "market_data", "news_data"]
 )
 def pipeline():
     @task(

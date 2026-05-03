@@ -13,7 +13,7 @@ from include.pyspark.silver_to_gold import transform_to_stock_tearsheet, transfo
     schedule="0 10 * * 1-5", # Every Monday - Friday, 10:00 UTC or 17:00 WIB
     start_date=pendulum.datetime(configuration.START_YEAR, configuration.START_MONTH, configuration.START_DAY, tz="Asia/Jakarta"),
     catchup=True,
-    tags=["bronze", "market_data", "news_data"]
+    tags=["stock_tearsheet", "bronze", "market_data", "news_data"]
 )
 def pipeline():
     @task(

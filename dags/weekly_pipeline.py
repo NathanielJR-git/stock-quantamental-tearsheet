@@ -12,7 +12,7 @@ from include.ingestion.weekly_market_data_pull import (
     schedule="0 10 * * 1", # Every Monday, 10:00 UTC or 17:00 WIB
     start_date=pendulum.datetime(configuration.START_YEAR, configuration.START_MONTH, configuration.START_DAY, tz="Asia/Jakarta"),
     catchup=True,
-    tags=["bronze", "market_data", "news_data"]
+    tags=["stock_tearsheet", "bronze", "market_data", "news_data"]
 )
 def pipeline():
     @task(
