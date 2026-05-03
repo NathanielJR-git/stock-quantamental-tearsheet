@@ -6,11 +6,12 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install dependencies
-RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose to port 8000
+COPY app.py .
+
+# Expose to port 8501
 EXPOSE 8501
 
 # Command to run the application
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true", "--browser.gatherUsageStats=false"]

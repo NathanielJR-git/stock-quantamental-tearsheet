@@ -6,8 +6,9 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install dependencies
-RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
+
+COPY athena_api.py .
 
 # Expose to port 8000
 EXPOSE 8000
