@@ -14,11 +14,23 @@ from pyspark.sql.window import Window
 import pyspark.sql.functions as F
 
 
-@task.pyspark(conn_id="spark_default")
-def transform_company_profiles(spark: SparkSession, sc: SparkContext):
+@task
+def transform_company_profiles():
     """
     Convert company profiles file format from JSON to Parquet
     """
+    # Create SparkSession
+    spark = SparkSession.builder \
+        .master("spark://spark-master:7077") \
+        .appName("bronze_to_silver") \
+        .config("spark.hadoop.fs.s3a.access.key", os.getenv("AWS_ACCESS_KEY_ID", "")) \
+        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY", "")) \
+        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("AWS_S3_ENDPOINT", "")) \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .getOrCreate()
+    
+    sc = spark.sparkContext
+    
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
     print("Starts company profiles bronze to silver transformation")
@@ -49,16 +61,29 @@ def transform_company_profiles(spark: SparkSession, sc: SparkContext):
         .mode("overwrite") \
         .parquet(configuration.SILVER_COMPANY_PROFILES_PATH)
 
+    spark.stop()
     print(f"Done processing company profile bronze to silver transformation")
 
 
-@task.pyspark(conn_id="spark_default")
-def transform_news_data(spark: SparkSession, sc: SparkContext):
+@task
+def transform_news_data():
     """
     Call Groq API for the latest 20 news form each stocks
     to get the top 3 most important news and each sentiment scores
     using Pandas UDF and Groq API's Llama 3.3 versatile model
     """
+    # Create SparkSession
+    spark = SparkSession.builder \
+        .master("spark://spark-master:7077") \
+        .appName("bronze_to_silver_news") \
+        .config("spark.hadoop.fs.s3a.access.key", os.getenv("AWS_ACCESS_KEY_ID", "")) \
+        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY", "")) \
+        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("AWS_S3_ENDPOINT", "")) \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .getOrCreate()
+    
+    sc = spark.sparkContext
+    
     # Inject Groq API Key to environment for UDF execution
     groq_key = os.getenv("GROQ_API_KEY")
     if groq_key:
@@ -142,16 +167,29 @@ def transform_news_data(spark: SparkSession, sc: SparkContext):
         .partitionBy("ticker", "date") \
         .parquet(configuration.SILVER_NEWS_PATH)
 
+    spark.stop()
     print(f"Done processing news data bronze to silver transformation")
 
 
-@task.pyspark(conn_id="spark_default")
-def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
+@task
+def transform_market_and_risk_data():
     """
     Reads market data, market metrics dan risk-free rate data
     (historical and daily data), clean them and create new
     financial metrics and ratios features
     """
+    # Create SparkSession
+    spark = SparkSession.builder \
+        .master("spark://spark-master:7077") \
+        .appName("bronze_to_silver_market_risk") \
+        .config("spark.hadoop.fs.s3a.access.key", os.getenv("AWS_ACCESS_KEY_ID", "")) \
+        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY", "")) \
+        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("AWS_S3_ENDPOINT", "")) \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .getOrCreate()
+    
+    sc = spark.sparkContext
+    
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
     print("Starts market data and risk bronze to silver transformation")
@@ -324,4 +362,5 @@ def transform_market_and_risk_data(spark: SparkSession, sc: SparkContext):
         .partitionBy("ticker", "date") \
         .parquet(configuration.SILVER_MARKET_AND_RISK_PATH)
 
+    spark.stop()
     print(f"Done processing market and risk data bronze to silver transformation")

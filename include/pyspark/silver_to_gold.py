@@ -1,3 +1,4 @@
+import os
 from airflow.sdk import task
 from include.configuration import configuration
 from include.pyspark.utils import apply_s3_config
@@ -7,13 +8,25 @@ from pyspark.sql.window import Window
 import pyspark.sql.functions as F
 
 
-@task.pyspark(conn_id="spark_default")
-def transform_to_stock_tearsheet(spark: SparkSession, sc: SparkContext):
+@task
+def transform_to_stock_tearsheet():
     """
     Read company profiles, news, and market and risk data,
     then join all of them and drop irrelevant columns
     (e.g. chart data columns used in chart data gold storage)
     """
+    # Create SparkSession
+    spark = SparkSession.builder \
+        .master("spark://spark-master:7077") \
+        .appName("silver_to_gold_tearsheet") \
+        .config("spark.hadoop.fs.s3a.access.key", os.getenv("AWS_ACCESS_KEY_ID", "")) \
+        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY", "")) \
+        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("AWS_S3_ENDPOINT", "")) \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .getOrCreate()
+    
+    sc = spark.sparkContext
+    
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
     print("Starts stock tearsheet silver to gold transformation")
@@ -54,14 +67,27 @@ def transform_to_stock_tearsheet(spark: SparkSession, sc: SparkContext):
         .mode("overwrite") \
         .parquet(configuration.GOLD_STOCK_TEARSHEET)
 
+    spark.stop()
     print("Done processing stock tearsheet silver to gold transformation")
 
 
-@task.pyspark(conn_id="spark_default")
-def transform_to_chart_data(spark: SparkSession, sc: SparkContext):
+@task
+def transform_to_chart_data():
     """
     Read silver market and risk data, then extract chart data related columns
     """
+    # Create SparkSession
+    spark = SparkSession.builder \
+        .master("spark://spark-master:7077") \
+        .appName("silver_to_gold_chart") \
+        .config("spark.hadoop.fs.s3a.access.key", os.getenv("AWS_ACCESS_KEY_ID", "")) \
+        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY", "")) \
+        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("AWS_S3_ENDPOINT", "")) \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .getOrCreate()
+    
+    sc = spark.sparkContext
+    
     # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
     print("Starts stock tearsheet silver to gold transformation")
@@ -80,4 +106,5 @@ def transform_to_chart_data(spark: SparkSession, sc: SparkContext):
         .partitionBy("ticker") \
         .parquet(configuration.GOLD_CHART_DATA_PATH)
 
+    spark.stop()
     print("Done processing stock tearsheet silver to gold transformation")
