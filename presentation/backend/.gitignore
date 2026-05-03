@@ -1,0 +1,16 @@
+# Python Caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# OS Generated Files
+.DS_Store
+
+# Secrets & Environment Variables
+.env
+*.pem
