@@ -1,4 +1,3 @@
-import os
 from airflow.sdk import task
 from include.configuration import configuration
 from include.pyspark.utils import apply_s3_config, create_spark_session
