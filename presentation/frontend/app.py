@@ -1,12 +1,65 @@
 import os
+from urllib.parse import quote
+
 import pandas as pd
 import plotly.graph_objects as go
 import requests
 import streamlit as st
 from plotly.subplots import make_subplots
 
-# Configuration
-API_URL = os.environ.get("API_URL", "http://backend:8000")
+# Matches FastAPI backend (docker-compose sets API_URL=http://backend:8000)
+_API_URL_RAW = os.environ.get("API_URL", "http://127.0.0.1:8000")
+API_BASE_URL = _API_URL_RAW.rstrip("/")
+PATH_TEARSHEET_DATA = "/api/tearsheet-data"
+PATH_CHART_DATA = "/api/chart-data"
+
+# Backend chart_data uses sma_*; overlays use indicator_*
+CHART_COL_ALIASES = (
+    ("sma_20", "indicator_1"),
+    ("sma_50", "indicator_2"),
+    ("sma_100", "indicator_3"),
+    ("sma_200", "indicator_4"),
+)
+
+# Watchlist tickers shown in sidebar (subset of universe)
+TICKERS: list[str] = [
+    "BBCA.JK",
+    "BBRI.JK",
+    "BMRI.JK",
+    "PTRO.JK",
+    "RAJA.JK",
+    "WIFI.JK",
+    "ADMR.JK",
+    "ARCI.JK",
+    "BULL.JK",
+    "MBSS.JK",
+    "DEWA.JK",
+    "BUMI.JK",
+]
+
+
+def _http_error_detail(exc: requests.HTTPError) -> str:
+    try:
+        body = exc.response.json()
+        d = body.get("detail")
+        if isinstance(d, str):
+            return d
+        if isinstance(d, list):
+            parts = []
+            for item in d:
+                loc = ""
+                msg = ""
+                if isinstance(item, dict):
+                    loc_l = item.get("loc") or []
+                    loc = ".".join(str(x) for x in loc_l if x)
+                    msg = str(item.get("msg", ""))
+                else:
+                    msg = str(item)
+                parts.append(": ".join(p for p in (loc, msg) if p))
+            return "; ".join(parts)
+    except Exception:  # noqa: BLE001
+        pass
+    return ""
 
 st.set_page_config(
     page_title="Stock Tearsheet",
@@ -32,31 +85,30 @@ st.markdown(
 
 
 @st.cache_data(show_spinner="Loading tearsheet data…")
-def fetch_tearsheet() -> list[dict]:
+def fetch_tearsheet() -> tuple[list[dict], str | None]:
+    url = f"{API_BASE_URL}{PATH_TEARSHEET_DATA}"
     try:
-        resp = requests.get(f"{API_URL}/api/tearsheet-data", timeout=15)
+        resp = requests.get(url, timeout=15)
         resp.raise_for_status()
         payload = resp.json()
-        return payload.get("data", [])
+        return payload.get("data", []) or [], None
     except requests.exceptions.ConnectionError:
-        st.error(
-            "Could not connect to the backend. "
-            f"Make sure the server is running at **{API_URL}**.",
-        )
-        return []
+        return [], "Could not connect to the backend."
     except requests.exceptions.HTTPError as exc:
-        st.error(f"Backend returned an error: {exc}")
-        return []
+        detail = _http_error_detail(exc)
+        msg = str(exc)
+        if detail:
+            msg = f"{msg} — {detail}"
+        return [], msg
     except Exception as exc:  # noqa: BLE001
-        st.error(f"Unexpected error fetching tearsheet: {exc}")
-        return []
+        return [], f"Unexpected error fetching tearsheet: {exc}"
 
 
 def fetch_chart_data(ticker: str) -> list[dict]:
+    seg = quote(ticker, safe="")
+    url = f"{API_BASE_URL}{PATH_CHART_DATA}/{seg}"
     try:
-        resp = requests.get(
-            f"{API_URL}/api/chart-data/{ticker}", timeout=15
-        )
+        resp = requests.get(url, timeout=15)
         resp.raise_for_status()
         payload = resp.json()
         return payload.get("data", [])
@@ -272,6 +324,10 @@ def render_chart(ticker: str) -> None:
     df["trading_date"] = pd.to_datetime(df["trading_date"])
     df.sort_values("trading_date", inplace=True)
 
+    for src, dst in CHART_COL_ALIASES:
+        if src in df.columns and dst not in df.columns:
+            df[dst] = df[src]
+
     required_cols = {"open_price", "high_price", "low_price", "close_price", "volume"}
     missing = required_cols - set(df.columns)
     if missing:
@@ -282,7 +338,10 @@ def render_chart(ticker: str) -> None:
     st.plotly_chart(fig, use_container_width=True)
 
 
-def render_news(record: dict) -> None:
+def render_news(record: dict | None) -> None:
+    if not record:
+        return
+
     title = record.get("news_title")
     if not title:
         return
@@ -324,34 +383,48 @@ def render_news(record: dict) -> None:
 
 
 def main() -> None:
-    tearsheet_data = fetch_tearsheet()
+    tearsheet_data, tearsheet_err = fetch_tearsheet()
 
-    if not tearsheet_data:
-        st.warning("No tearsheet data could be loaded. Check the backend connection.")
-        return
-
-    tickers = sorted({row["ticker"] for row in tearsheet_data if row.get("ticker")})
+    records_by_ticker = {
+        row.get("ticker"): row for row in tearsheet_data if row.get("ticker")
+    }
 
     # Sidebar
     st.sidebar.title("Stock Tearsheet")
     st.sidebar.markdown("---")
-    selected_ticker = st.sidebar.selectbox("Select Ticker", tickers)
+    selected_ticker = st.sidebar.selectbox("Select Ticker", TICKERS)
     st.sidebar.markdown("---")
-    st.sidebar.caption(f"Backend: `{API_URL}`")
+    st.sidebar.caption(f"Backend: `{API_BASE_URL}`")
 
-    # Match ticker to tearsheet row
-    record = next(
-        (r for r in tearsheet_data if r.get("ticker") == selected_ticker), {}
-    )
+    if tearsheet_err:
+        if "Could not connect" in tearsheet_err:
+            st.error(
+                tearsheet_err
+                + f" Make sure the server is reachable at **{API_BASE_URL}**.",
+            )
+        else:
+            st.error(tearsheet_err)
+            st.info("You can still try loading the technical chart below.")
+    elif not tearsheet_data:
+        st.warning(
+            "No tearsheet rows were returned from Athena "
+            "(query succeeded but the result set may be empty)."
+        )
 
-    if not record:
-        st.error(f"No data found for ticker **{selected_ticker}**.")
-        return
+    record = records_by_ticker.get(selected_ticker)
 
     # Render sections
-    render_company_header(record)
-    st.markdown("")  # Spacing
-    render_metrics(record)
+    if record:
+        render_company_header(record)
+        st.markdown("")  # Spacing
+        render_metrics(record)
+    else:
+        st.subheader(selected_ticker)
+        if not tearsheet_err:
+            st.info(
+                "No tearsheet row returned for this ticker. "
+                "Charts may still load if chart data exists in Athena."
+            )
     render_chart(selected_ticker)
     render_news(record)
 
