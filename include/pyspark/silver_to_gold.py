@@ -2,8 +2,6 @@ import os
 from airflow.sdk import task
 from include.configuration import configuration
 from include.pyspark.utils import apply_s3_config, create_spark_session
-from pyspark.sql import SparkSession
-from pyspark.context import SparkContext
 from pyspark.sql.window import Window
 import pyspark.sql.functions as F
 
@@ -23,37 +21,25 @@ def transform_to_stock_tearsheet():
     apply_s3_config(sc)
     print("Starts stock tearsheet silver to gold transformation")
 
-    # Read company profiles, news, and market and risk data
     df_company_profiles = spark.read.parquet(configuration.SILVER_COMPANY_PROFILES_PATH)
     df_news = spark.read.parquet(configuration.SILVER_NEWS_PATH)
     df_market_and_risk_data = spark.read \
         .parquet(configuration.SILVER_MARKET_AND_RISK_PATH) \
-        .drop(
-            "close", "high", "low", "open", "volume",
-            "sma_20", "sma_50", "sma_100", "sma_200", 
-        )
-    
-    # Combine all silver data
-    df_profiles_and_news = df_company_profiles.join(
-        df_news,
-        on="ticker",
-        how="inner"
-    )
+        .drop("close", "high", "low", "open", "volume",
+              "sma_20", "sma_50", "sma_100", "sma_200")
 
-    df_combined = df_market_and_risk_data.join(
-        df_profiles_and_news,
-        on=["ticker", "date"],
-        how="inner"
-    )
+    # Get the single latest market-and-risk snapshot per ticker.
+    latest_window = Window.partitionBy("ticker").orderBy(F.col("date").desc())
+    df_latest_market = df_market_and_risk_data \
+        .withColumn("rn", F.row_number().over(latest_window)) \
+        .filter(F.col("rn") == 1) \
+        .drop("rn")
 
-    # Take the latest data for each ticker 
-    ticker_max_date_window = Window.partitionBy("ticker").orderBy(F.col("date").desc())
+    # Combine all data
+    df_stock_tearsheet = df_latest_market \
+        .join(df_company_profiles, on="ticker", how="inner") \
+        .join(df_news, on="ticker", how="left")
 
-    df_stock_tearsheet = df_combined \
-        .withColumn("row_number", F.row_number().over(ticker_max_date_window)) \
-        .filter(F.col("row_number") == 1) \
-        .drop("row_number")
-        
     # Save to stock tearsheet S3 gold path as Parquet
     df_stock_tearsheet.write \
         .mode("overwrite") \
