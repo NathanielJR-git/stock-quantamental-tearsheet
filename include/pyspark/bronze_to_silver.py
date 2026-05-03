@@ -3,7 +3,7 @@ import math
 from airflow.sdk import task
 from include.configuration import configuration
 from include.llm.pick_and_rate_news import extract_top_news_udf
-from include.pyspark.utils import apply_s3_config
+from include.pyspark.utils import apply_s3_config, create_spark_session
 from pyspark.sql import SparkSession
 from pyspark.context import SparkContext
 from pyspark.sql.types import (
@@ -19,19 +19,8 @@ def transform_company_profiles():
     """
     Convert company profiles file format from JSON to Parquet
     """
-    # Create SparkSession
-    spark = SparkSession.builder \
-        .master("spark://spark-master:7077") \
-        .appName("bronze_to_silver") \
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("AWS_ACCESS_KEY_ID", "")) \
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY", "")) \
-        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("AWS_S3_ENDPOINT", "")) \
-        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-        .getOrCreate()
-    
+    spark = create_spark_session("bronze_to_silver")
     sc = spark.sparkContext
-    
-    # Apply Hadoop S3 connection configurations
     apply_s3_config(sc)
     print("Starts company profiles bronze to silver transformation")
 
@@ -72,15 +61,7 @@ def transform_news_data():
     to get the top 3 most important news and each sentiment scores
     using Pandas UDF and Groq API's Llama 3.3 versatile model
     """
-    # Create SparkSession
-    spark = SparkSession.builder \
-        .master("spark://spark-master:7077") \
-        .appName("bronze_to_silver_news") \
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("AWS_ACCESS_KEY_ID", "")) \
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY", "")) \
-        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("AWS_S3_ENDPOINT", "")) \
-        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-        .getOrCreate()
+    spark = create_spark_session("bronze_to_silver_news")
     
     sc = spark.sparkContext
     
@@ -178,15 +159,7 @@ def transform_market_and_risk_data():
     (historical and daily data), clean them and create new
     financial metrics and ratios features
     """
-    # Create SparkSession
-    spark = SparkSession.builder \
-        .master("spark://spark-master:7077") \
-        .appName("bronze_to_silver_market_risk") \
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("AWS_ACCESS_KEY_ID", "")) \
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY", "")) \
-        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("AWS_S3_ENDPOINT", "")) \
-        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-        .getOrCreate()
+    spark = create_spark_session("bronze_to_silver_market_risk")
     
     sc = spark.sparkContext
     
@@ -209,6 +182,7 @@ def transform_market_and_risk_data():
     # Read daily (routine) market data
     df_market_data_routine = spark.read \
         .option("header", "true") \
+        .option("basePath", configuration.BRONZE_MARKET_DATA_PATH) \
         .csv(f"{configuration.BRONZE_MARKET_DATA_PATH}/ticker=*/year=*/") \
         .withColumn("date", F.to_date("Date")) \
         .withColumn("close", F.col("Close").cast("float")) \

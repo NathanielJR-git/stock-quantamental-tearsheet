@@ -1,7 +1,7 @@
 import os
 from airflow.sdk import task
 from include.configuration import configuration
-from include.pyspark.utils import apply_s3_config
+from include.pyspark.utils import apply_s3_config, create_spark_session
 from pyspark.sql import SparkSession
 from pyspark.context import SparkContext
 from pyspark.sql.window import Window
@@ -15,15 +15,7 @@ def transform_to_stock_tearsheet():
     then join all of them and drop irrelevant columns
     (e.g. chart data columns used in chart data gold storage)
     """
-    # Create SparkSession
-    spark = SparkSession.builder \
-        .master("spark://spark-master:7077") \
-        .appName("silver_to_gold_tearsheet") \
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("AWS_ACCESS_KEY_ID", "")) \
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY", "")) \
-        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("AWS_S3_ENDPOINT", "")) \
-        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-        .getOrCreate()
+    spark = create_spark_session("silver_to_gold_tearsheet")
     
     sc = spark.sparkContext
     
@@ -76,15 +68,7 @@ def transform_to_chart_data():
     """
     Read silver market and risk data, then extract chart data related columns
     """
-    # Create SparkSession
-    spark = SparkSession.builder \
-        .master("spark://spark-master:7077") \
-        .appName("silver_to_gold_chart") \
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("AWS_ACCESS_KEY_ID", "")) \
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("AWS_SECRET_ACCESS_KEY", "")) \
-        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("AWS_S3_ENDPOINT", "")) \
-        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-        .getOrCreate()
+    spark = create_spark_session("silver_to_gold_chart")
     
     sc = spark.sparkContext
     
