@@ -1,7 +1,6 @@
 import datetime
 import pendulum
 from airflow.sdk import dag, task
-from airflow.models.baseoperator import chain
 from include.configuration import configuration
 from include.ingestion.daily_market_data_pull import download_daily_market_data
 from include.ingestion.news_pull import download_news_from_gnews
@@ -45,10 +44,16 @@ def pipeline():
     gold_transform_chart_data = transform_to_chart_data()
 
     # Define dependencies
-    chain(
-        [ingest_market_data, ingest_news],
-        [silver_transform_market_and_risk, silver_transform_news_data],
-        [gold_transform_stock_tearsheet, gold_transform_chart_data]
-    )
+    ingestion_tasks = [ingest_market_data, ingest_news]
+    silver_tasks = [silver_transform_news_data, silver_transform_market_and_risk]
+    gold_tasks = [gold_transform_stock_tearsheet, gold_transform_chart_data]
+    
+    for ingestion_task in ingestion_tasks:
+        for silver_task in silver_tasks:
+            ingestion_task >> silver_task
+    
+    for silver_task in silver_tasks:
+        for gold_task in gold_tasks:
+            silver_task >> gold_task
 
 pipeline()
