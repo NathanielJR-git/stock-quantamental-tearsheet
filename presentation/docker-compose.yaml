@@ -1,25 +1,24 @@
 services:
 
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    environment:
-      - AWS_ACCESS_KEY_ID=your_access_key
-      - AWS_SECRET_ACCESS_KEY=your_secret_key
-      - AWS_REGION=us-east-1
+    env_file:
+      - .env
     restart: unless-stopped
 
   frontend:
-    build: 
+    build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
       - "8501:8501"
     environment:
       - API_URL=http://backend:8000
+      - STREAMLIT_SERVER_HEADLESS=true
     depends_on:
       - backend
     restart: unless-stopped
