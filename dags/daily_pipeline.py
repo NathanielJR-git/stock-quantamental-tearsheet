@@ -5,6 +5,7 @@ from include.configuration import configuration
 from include.ingestion.daily_market_data_pull import download_daily_market_data
 from include.ingestion.news_pull import download_news_from_gnews
 from include.pyspark.bronze_to_silver import transform_news_data, transform_market_and_risk_data
+from include.pyspark.silver_to_gold import transform_to_stock_tearsheet, transform_to_chart_data
 
 @dag(
     dag_id="daily-loading-pipeline",
@@ -38,9 +39,13 @@ def pipeline():
     silver_transform_news_data = transform_news_data()
     silver_transform_market_and_risk = transform_market_and_risk_data()
 
+    # Transform silver to gold format
+    gold_transform_stock_tearsheet = transform_to_stock_tearsheet
+    gold_transform_chart_data = transform_to_chart_data
 
     # Transform silver to gold format
     [ingest_market_data, ingest_news] >> \
-    [silver_transform_market_and_risk, silver_transform_news_data]
+    [silver_transform_market_and_risk, silver_transform_news_data] >> \
+    [gold_transform_stock_tearsheet, gold_transform_chart_data]
 
 pipeline()
