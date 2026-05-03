@@ -1,4 +1,4 @@
-from airflow.hooks.base import BaseHook
+from airflow.sdk.bases.hook import BaseHook
 from pyspark.context import SparkContext
 
 def apply_s3_config(sc: SparkContext):
