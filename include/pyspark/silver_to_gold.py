@@ -37,13 +37,13 @@ def transform_to_stock_tearsheet(spark: SparkSession, sc: SparkContext):
     df_stock_tearsheet = df_market_and_risk_data.join(
         df_profiles_and_news,
         on=["ticker", "date"],
-        how="left"
-    ).dropna(subset=["title"])
+        how="inner"
+    )
 
     # Save to stock tearsheet S3 gold path as Parquet
     df_stock_tearsheet.write \
         .mode("overwrite") \
-        .partitionBy("ticker", "date") \
+        .partitionBy("ticker") \
         .parquet(configuration.GOLD_STOCK_TEARSHEET)
 
     print("Done processing stock tearsheet silver to gold transformation")
@@ -69,7 +69,7 @@ def transform_to_chart_data(spark: SparkSession, sc: SparkContext):
     # Save to chart data S3 gold path as Parquet
     df_chart_data.write \
         .mode("overwrite") \
-        .partitionBy("ticker", "date") \
+        .partitionBy("ticker") \
         .parquet(configuration.GOLD_CHART_DATA_PATH)
 
     print("Done processing stock tearsheet silver to gold transformation")
